@@ -1,6 +1,7 @@
 @using WebClient.Abstractions
 @using WebClient.Shared.Models
 @using Domain.ViewModel
+@using Plk.Blazor.DragDrop
 
 @inject ITaskDataService taskService;
 @inject IMemberDataService memberService;
@@ -24,6 +25,9 @@
         height: 32px;
         border-radius: 50%;
     }
+    .delete-icon {
+        cursor: pointer;
+    }
     @@media(max-width: 1400px) { 
         .task-wrapper .task-item { 
             font-size: 16px;
@@ -45,37 +49,50 @@
 </style>
 
 <div class="task-wrapper">
-    @foreach (var item in tasks)
-    {
-        <div class="task-item p-3 my-3 row m-0">
-            <div class="col-10 p-0">
-                <Check TValue="bool" Checked="@item.IsDone" CheckedChanged="@(val => ToggleTask(item))">
-                    <span class="@(item.IsDone ? "done-text" : "")">@item.Text</span>
-                </Check>
-            </div>
-            <div class="col-2 p-0 d-flex justify-content-end align-items-center">
-                @if (item.Member != null) {
-                    <div class="avtar mr-1" style="background-color: @selectedMember.Avatar;"></div>
-                }
-                <img class="delete-icon" src="/assets/images/delete-icon.svg"/>
-            </div>
-        </div>
-    }
+     @foreach (TaskVm item in tasks)
+        {
+            if (item != null)
+            {
+                <div class="task-item p-3 my-3 row m-0" @ondragend="v=>HandleDragEnd(item)" draggable="true" @ondragstart="@(val=>HandleDragStart(item))">
+                    <div class="col-10 p-0">
+                        <Check Disabled="@item.IsComplete" TValue="bool" Checked="@item.IsComplete" CheckedChanged="@(val => ToggleTask(item))">
+                            <span class="@(item.IsComplete ? "done-text" : "")">@item.Subject</span>
+                        </Check>
+                    </div>
+                    <div class="col-2 p-0 d-flex justify-content-end align-items-center">
+                        @if (!string.IsNullOrEmpty(item.Avatar))
+                        {
+                            <div class="avtar mr-1" style="background-color: @item.Avatar;"></div>
+                        }
+                        <img class="delete-icon" src="/assets/images/delete-icon.svg" @onclick="@(val=> Delete(item))" />
+                    </div>
+                </div>
+
+            }
+        }
 </div>
 
 @code  {
-    private List<TaskModel> tasks = new List<TaskModel>();
+    private IEnumerable<TaskVm> tasks = new List<TaskVm>();
     private MemberVm selectedMember;
+
+    [Parameter]
+    public EventCallback<TaskVm> DragStratEvent { get; set; }
+
+    [Parameter]
+    public EventCallback<TaskVm> DragEndEvent { get; set; }
 
     protected override Task OnInitializedAsync()
     {
         memberService.SelectedMemberChanged += MemberServiceOnSelectedMemberChanged;
         taskService.TasksUpdated += TaskServiceOnTasksUpdated;
+        taskService.TaskChanged += TaskServiceOnTasksUpdated;
+
         LoadCurrentTasks();
         return base.OnInitializedAsync();
     }
 
-    private void ToggleTask(TaskModel model)
+    private void ToggleTask(TaskVm model)
     {
         taskService.ToggleTask(model.Id);
         StateHasChanged();
@@ -102,8 +119,23 @@
             return;
         };
 
-        tasks = taskService.Tasks.Where(t => t.Member == selectedMember.Id).ToList();
+        tasks = taskService.Tasks.Where(t => t.AssignedMemberId == selectedMember.Id).ToList();
         StateHasChanged();
+    }
+
+    private void Delete(TaskVm task)
+    {
+        taskService.OnDeleteTask(task.Id);
+    }
+
+    private void HandleDragStart(TaskVm taskVm)
+    {
+        DragStratEvent.InvokeAsync(taskVm);
+    }
+
+    private void HandleDragEnd(TaskVm task)
+    {
+        DragEndEvent.InvokeAsync(task);
     }
 
 }

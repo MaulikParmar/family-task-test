@@ -11,7 +11,7 @@
 @if(isLoaded) {
     <div class="page-wrapper row m-0 col-12 p-0">
         <div class="col-4 p-0">
-            <LeftMenu />
+            <LeftMenu ShowViewAll="true" DragTask="Task" DragEnded="DragEnded" />
         </div>
         <div class="col-8 p-0">
             @if (showLister) {
@@ -26,7 +26,7 @@
                     </div>
                 </div>
                 <div class="col-10 offset-1">
-                    <TaskListerComponent />
+                    <TaskListerComponent DragStratEvent="@OnDragStrat" DragEndEvent="@OnDragEnd" />
                 </div>
             }
             @if(false) {
@@ -41,6 +41,8 @@
 
     public List<MemberVm> members;
     public string newTask;
+    public TaskVm Task;
+    public bool DragEnded = false;
 
 
     private bool isLoaded;
@@ -53,25 +55,36 @@
         return base.OnInitializedAsync();
     }
 
-
-    
-
     private void OnAddItem()
     {
-        var task = new TaskModel()
+        var task = new Domain.Commands.CreateTaskCommand()
         {
-            Id = Guid.NewGuid(),
-            IsDone = false,
-            Text = newTask
+            Subject = newTask
         };
 
         newTask = string.Empty;
 
         if (memberService.SelectedMember != null)
         {
-            task.Member = memberService.SelectedMember.Id;
+            task.AssignedMemberId = memberService.SelectedMember.Id;
         }
+
         taskDataService.AddTask(task);
+
+        StateHasChanged();
+    }
+
+    private void OnDragStrat(TaskVm task)
+    {
+        Task = task as TaskVm;
+        DragEnded = false;
+        StateHasChanged();
+    }
+
+    private void OnDragEnd(TaskVm task)
+    {
+        Task = task as TaskVm;
+        DragEnded = true;
         StateHasChanged();
     }
 

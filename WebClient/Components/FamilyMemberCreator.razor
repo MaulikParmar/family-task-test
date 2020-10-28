@@ -25,6 +25,13 @@
         display: inline-block;
         cursor: pointer;
     }
+
+    .create-wrapper .active {
+        border-color: black;
+        border-style: solid;
+        border-width: 2px;
+    }
+
     @@media(max-width: 1400px) {
         .create-wrapper .header {
             font-size: 24px;
@@ -83,7 +90,9 @@
                     <div class="col-9 p-0">
                         @foreach (var item in avatars)
                         {
-                            <div class="avtar" @onclick="@(e => OnAvatarSelect(item))" style="background-color: @item;"></div>
+                            <div class="avtar @(member != null && member.Avatar == item ? "active" : "" )" 
+                                 @onclick="@(e => OnAvatarSelect(item))" 
+                                 style="background-color: @item;"></div>
                         }
                     </div>
                     <div class="col-3 p-0 text-right">

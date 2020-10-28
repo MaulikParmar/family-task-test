@@ -17,6 +17,7 @@ namespace WebClient.Services
     public class MemberDataService : IMemberDataService
     {
         private readonly HttpClient httpClient;
+
         public MemberDataService(IHttpClientFactory clientFactory)
         {
             httpClient = clientFactory.CreateClient("FamilyTaskAPI");

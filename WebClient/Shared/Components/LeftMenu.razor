@@ -4,6 +4,7 @@
 @namespace WebClient.Shared.Components
 
 @inject WebClient.Abstractions.IMemberDataService memberService
+@inject WebClient.Abstractions.ITaskDataService taskService
 <style>
     .menu-wrapper {
         background: #FBFBFB;
@@ -11,6 +12,7 @@
         overflow-y: auto;
         height: 100%;
     }
+
     .menu-wrapper .menu-item {
         background: #FFFFFF;
         box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.12);
@@ -20,9 +22,11 @@
         align-items: center;
         border: 3px solid #FFFFFF;
     }
+
     .menu-wrapper .menu-item.active {
         border: 3px solid #CC1778;
     }
+
     .menu-wrapper .add-menu-item {
         border: 1px dashed #000000;
         box-sizing: border-box;
@@ -33,19 +37,26 @@
         align-items: center;
         justify-content: center;
     }
+
     .add-menu-item .fa {
         font-size: 12px;
     }
+
     .menu-wrapper .label {
         color: #000000;
         font-family: "Poppins Regular";
         font-size: 24px;
         line-height: 36px;
     }
+
     .menu-wrapper .avtar {
         width: 32px;
         height: 32px;
         border-radius: 50%;
+    }
+
+    .highlight {
+        background-color:pink !important;
     }
 
     @@media(max-width: 1400px) {
@@ -53,11 +64,13 @@
             font-size: 16px;
             line-height: 24px;
         }
+
         .menu-wrapper .avtar {
             width: 24px;
             height: 24px;
         }
     }
+
     @@media(max-width: 767.98px) {
         .menu-wrapper .avtar {
             width: 16px;
@@ -67,23 +80,76 @@
 </style>
 
 <div class="menu-wrapper col-12 p-0">
-    @if(MenuItems != null && MenuItems.Length > 0) {
-        @foreach (var item in MenuItems) {
-            <div class="menu-item col-10 offset-1 p-3 my-4 p-sm-2 @(item.isActive ? "active" : "")" @onclick="@(e => SelectMember(item.referenceId))">
-                @if(item.iconColor != null) {
+    @if (MenuItems != null && MenuItems.Length > 0)
+    {
+        @if (ShowViewAll)
+        {
+            <div class="menu-item col-10 offset-1 p-3 my-4 p-sm-2  @(ViewAll? "active" : "")"
+                 @onclick="@OnViewAll">
+                <div class="label"> View All </div>
+            </div>
+        }
+
+
+        @foreach (var item in MenuItems)
+        {
+            <div class="menu-item col-10 offset-1 p-3 my-4 p-sm-2  @(item.isActive ? "active" : "") @(_dropMenuItem != null && _dropMenuItem.referenceId == item.referenceId ? "highlight" : "")"                 
+                 dropzone="move"
+                 @ondrag="OnDrop"
+                 @ondragleave="@HandleDragLeave"
+                 @ondragenter="@(v=> HandleDragEnter(item))"
+                 ondragover="event.preventDefault();"
+                 @onclick="@(e => SelectMember(item.referenceId))">
+
+                @if (item.iconColor != null)
+                {
                     <div class="avtar mr-3" style="background-color: @(item.iconColor);"> </div>
                 }
                 <div class="label"> @item.label </div>
             </div>
         }
     }
-    
+
     <div class="add-menu-item label col-10 offset-1 p-3 my-4 p-sm-2" @onclick="@OnAddItem">
         <span class="fa fa-plus"></span> &nbsp; Add Member
     </div>
 </div>
 
 @code {
+
+    [Parameter]
+    public bool ShowViewAll { get; set; }
+
+    private MenuItem _dropMenuItem;
+    public bool ViewAll { get; set; } = true;
+
+    private Domain.ViewModel.TaskVm _dragTask;
+    [Parameter]
+    public Domain.ViewModel.TaskVm DragTask
+    {
+        get => _dragTask;
+        set
+        {
+            _dragTask = value;
+        }
+    }
+
+    [Parameter]
+    public bool DragEnded
+    {
+        set
+        {
+            if (value)
+            {
+                OnAssignTask();
+            }
+            else
+            {
+                _dragTask = null;
+            }
+        }
+    }
+
     protected override Task OnInitializedAsync()
     {
         MenuItems = memberService.Members.ToMenuItems();
@@ -101,7 +167,7 @@
     private void MemberServiceOnSelectedMemberChanged(object sender, EventArgs e)
     {
         InactivateAllItems();
-        if(memberService.SelectedMember != null)
+        if (memberService.SelectedMember != null)
             SetActiveItem(memberService.SelectedMember.Id);
         StateHasChanged();
     }
@@ -112,7 +178,7 @@
         StateHasChanged();
     }
 
-    [Parameter] public MenuItem[] MenuItems {get; set;}
+    [Parameter] public MenuItem[] MenuItems { get; set; }
 
     private void InactivateAllItems()
     {
@@ -136,11 +202,61 @@
     void SelectMember(Guid id)
     {
         memberService.SelectMember(id);
+        ViewAll = memberService.SelectedMember == null;
     }
 
     private void OnAddItem()
     {
         memberService.SelectNullMember();
+    }
+
+    private void OnViewAll()
+    {
+        memberService.SelectNullMember();
+        ViewAll = true;
+        StateHasChanged();
+    }
+
+    private void HandleDragEnter(MenuItem menu)
+    {
+        System.Diagnostics.Debug.WriteLine("...Drag Enter....");
+        _dropMenuItem = menu;
+        StateHasChanged();
+    }
+
+    private void HandleDragLeave()
+    {
+        System.Diagnostics.Debug.WriteLine("...Drag Leave....");
+        _dropMenuItem = null;
+        StateHasChanged();
+    }
+
+    private void HandleDrop(MenuItem menu)
+    {
+        var t = DragTask;
+    }
+
+    public void OnDrop(DragEventArgs dragEventArgs)
+    {
+
+    }
+
+    public void OnAssignTask()
+    {
+        if (_dropMenuItem != null && _dragTask != null)
+        {
+            taskService.AssignTask(_dragTask.Id, _dropMenuItem.referenceId);
+
+            _dropMenuItem = null;
+            DragTask = null;
+        }
+        else
+        {
+            _dropMenuItem = null;
+            _dragTask = null;
+        }
+
+        StateHasChanged();
     }
 
 }

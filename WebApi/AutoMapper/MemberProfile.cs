@@ -2,10 +2,7 @@
 using Domain.Commands;
 using Domain.DataModels;
 using Domain.ViewModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Security.Cryptography.X509Certificates;
 
 namespace WebApi.AutoMapper
 {
@@ -16,6 +13,11 @@ namespace WebApi.AutoMapper
             CreateMap<CreateMemberCommand, Member>();
             CreateMap<UpdateMemberCommand, Member>();
             CreateMap<Member, MemberVm>();
+
+            CreateMap<CreateTaskCommand, Task>();
+            CreateMap<UpdateTaskCommand, Task>();
+            CreateMap<Task, TaskVm>()
+                .ForMember(dest=>dest.Avatar, src=>src.MapFrom(x=>x.AssignMember.Avatar));
         }
     }
 }

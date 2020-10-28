@@ -9,9 +9,9 @@ namespace DataLayer
     public class MemberRepository : BaseRepository<Guid, Member, MemberRepository>, IMemberRepository
     {
         public MemberRepository(FamilyTaskContext context) : base(context)
-        { }
-
-       
+        {
+            
+        }
 
         IMemberRepository IBaseRepository<Guid, Member, IMemberRepository>.NoTrack()
         {
@@ -21,8 +21,6 @@ namespace DataLayer
         IMemberRepository IBaseRepository<Guid, Member, IMemberRepository>.Reset()
         {
             return base.Reset();
-        }
-
-       
+        }       
     }
 }
